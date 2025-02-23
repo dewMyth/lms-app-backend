@@ -24,6 +24,19 @@ export class UsersController {
     return this.usersService.loginStudent(enteredStudentData);
   }
 
+  @Post('add-assignment/:assignmentId/:userId')
+  addActivityToAssignments(
+    @Param('assignmentId') assignmentId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.usersService.addActivityToAssignments(assignmentId, userId);
+  }
+
+  @Get('view-all-assignments/:userId')
+  getAllAssignmentsByUser(@Param('userId') userId: string) {
+    return this.usersService.getAllAssignmentsByUser(userId);
+  }
+
   // @Get()
   // findAll() {
   //   return this.usersService.findAll();

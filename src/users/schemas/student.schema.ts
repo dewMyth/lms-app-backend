@@ -19,6 +19,9 @@ export class Student {
 
   @Prop()
   pin_no: number;
+
+  @Prop()
+  assignments: object[];
 }
 
 export const StudentSchema = SchemaFactory.createForClass(Student);

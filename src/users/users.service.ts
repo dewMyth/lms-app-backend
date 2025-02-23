@@ -11,6 +11,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Parent } from './schemas/parent.schema';
 import * as bcrypt from 'bcrypt';
 import { UtilService } from 'src/util.service';
+import { Activity } from 'src/subject-content/schemas/activity.schema';
 // import { CreateUserDto } from './dto/create-user.dto';
 // import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -19,6 +20,7 @@ export class UsersService {
   constructor(
     @InjectModel(Student.name) private studentModel: Model<Student>,
     @InjectModel(Parent.name) private parentModel: Model<Parent>,
+    @InjectModel(Activity.name) private activityModel: Model<Activity>,
     private _utilService: UtilService,
   ) {}
 
@@ -105,6 +107,8 @@ export class UsersService {
     const token = this._utilService.generateJWTToken(logggedUser);
 
     delete logggedUser.password;
+    delete logggedUser.assignments;
+    delete logggedUser.parents_email;
 
     logggedUser = {
       ...logggedUser,
@@ -117,5 +121,49 @@ export class UsersService {
       message: `User - ${logggedUser.userName} : ${logggedUser.email} logged in successfully.`,
       user: logggedUser,
     };
+  }
+
+  async addActivityToAssignments(assignmentId, userId) {
+    // Get User by User Id
+    const user = await this.studentModel.findOne({ _id: userId }).lean().exec();
+
+    // Get Assignment from Assignment Id
+    const assignment = await this.activityModel
+      .findOne({ _id: assignmentId })
+      .lean()
+      .exec();
+
+    if (!assignment || !user) {
+      throw new InternalServerErrorException();
+    }
+
+    // Add New Fields to Assignments Object
+    assignment['your_marks'] = null;
+    assignment['submitted'] = false;
+    assignment['status'] = 'pending';
+
+    // Add the assignment to User object
+    user.assignments?.push(assignment);
+
+    // Save the updated user
+    const res = await this.studentModel.updateOne({ _id: userId }, user);
+
+    if (!res) {
+      throw new InternalServerErrorException();
+    }
+
+    return {
+      status: 200,
+      message: 'Assignment added to the User successfully!',
+    };
+  }
+
+  async getAllAssignmentsByUser(userId) {
+    const student = await this.studentModel
+      .findOne({ _id: userId })
+      .lean()
+      .exec();
+
+    return student?.assignments;
   }
 }
