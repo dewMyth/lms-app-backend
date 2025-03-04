@@ -6,7 +6,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Student } from './schemas/student.schema';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Parent } from './schemas/parent.schema';
 import * as bcrypt from 'bcrypt';
@@ -15,14 +15,23 @@ import { Activity } from 'src/subject-content/schemas/activity.schema';
 // import { CreateUserDto } from './dto/create-user.dto';
 // import { UpdateUserDto } from './dto/update-user.dto';
 
+import { createClient } from '@supabase/supabase-js';
+
 @Injectable()
 export class UsersService {
+  private supabase;
+
   constructor(
     @InjectModel(Student.name) private studentModel: Model<Student>,
     @InjectModel(Parent.name) private parentModel: Model<Parent>,
     @InjectModel(Activity.name) private activityModel: Model<Activity>,
     private _utilService: UtilService,
-  ) {}
+  ) {
+    this.supabase = createClient(
+      'https://efqjdnqbwlsrbzstvlbp.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcWpkbnFid2xzcmJ6c3R2bGJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NDU3NTEsImV4cCI6MjA1NjQyMTc1MX0.T718Ku2Rd17X8RyhT85SXt_KZOkO3smgbUMR8OSfh9M',
+    );
+  }
 
   // Create a Student Account w/ Parent Account
   async createStudentAccount(studentData) {
@@ -141,6 +150,7 @@ export class UsersService {
     assignment['your_marks'] = null;
     assignment['submitted'] = false;
     assignment['status'] = 'pending';
+    assignment['started_datetime'] = Date.now();
 
     // Add the assignment to User object
     user.assignments?.push(assignment);
@@ -165,5 +175,63 @@ export class UsersService {
       .exec();
 
     return student?.assignments;
+  }
+
+  async submitAssignment(file: Express.Multer.File, assignmentId, userId) {
+    const fileName = `${assignmentId}_${userId}_${Date.now()}_${file.originalname}`;
+
+    const { data, error } = await this.supabase.storage
+      .from('assignment-submissions')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+    if (error) {
+      return error;
+    }
+
+    const getPublicUrlofSubmittedAssignment = await this.supabase.storage
+      .from('assignment-submissions')
+      .getPublicUrl(fileName);
+
+    // Update user's assignment status
+    const user = await this.studentModel.findById(userId).lean().exec();
+
+    if (!user || !user.assignments) {
+      throw new InternalServerErrorException('User or assignments not found');
+    }
+
+    let result;
+    const assignmentObjectId = new mongoose.Types.ObjectId(assignmentId);
+
+    try {
+      result = await this.studentModel.updateOne(
+        {
+          _id: userId,
+          'assignments._id': assignmentObjectId,
+        },
+        {
+          $set: {
+            'assignments.$.submitted': true,
+            'assignments.$.file_link':
+              getPublicUrlofSubmittedAssignment.data.publicUrl,
+          },
+        },
+      );
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+    }
+
+    if (result.modifiedCount > 0) {
+      return {
+        status: HttpStatus.CREATED,
+        message: 'Assignment Upload Successful!',
+      };
+    } else {
+      return {
+        staus: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Assignment upload not successful!',
+      };
+    }
   }
 }

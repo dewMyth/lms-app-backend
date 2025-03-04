@@ -6,9 +6,13 @@ import {
   Patch,
   Param,
   Delete,
+  Put,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { Student } from './entities/student.entity';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('users')
 export class UsersController {
@@ -35,6 +39,16 @@ export class UsersController {
   @Get('view-all-assignments/:userId')
   getAllAssignmentsByUser(@Param('userId') userId: string) {
     return this.usersService.getAllAssignmentsByUser(userId);
+  }
+
+  @Post('submission/:assignmentId/:userId')
+  @UseInterceptors(FileInterceptor('file'))
+  submitAssignment(
+    @Param('assignmentId') assignmentId: string,
+    @Param('userId') userId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.usersService.submitAssignment(file, assignmentId, userId);
   }
 
   // @Get()
