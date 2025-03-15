@@ -5,6 +5,9 @@ export type ParentDocument = HydratedDocument<Parent>;
 
 @Schema()
 export class Parent {
+  @Prop({ default: '' })
+  username: string;
+
   @Prop()
   email: string;
 

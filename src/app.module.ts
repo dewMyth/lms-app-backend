@@ -13,6 +13,7 @@ import {
   VideoLesson,
   VideoLessonSchema,
 } from './subject-content/schemas/video-lesson.schema';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import {
     ),
     UsersModule,
     SubjectContentModule,
+    EventsModule,
     MongooseModule.forFeature([
       { name: Activity.name, schema: ActivitySchema },
     ]),

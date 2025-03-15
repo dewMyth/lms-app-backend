@@ -56,6 +56,23 @@ export class UsersController {
     return this.usersService.submitAssignment(file, assignmentId, userId);
   }
 
+  @Post('add-avatar/:userId')
+  @UseInterceptors(FileInterceptor('file'))
+  addAvatar(
+    @Param('userId') userId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.usersService.saveAvatar(file, userId);
+  }
+
+  @Get('all-user-details/:type/:userId')
+  getAllUserDetails(
+    @Param('type') userType: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.usersService.getAllUserData(userType, userId);
+  }
+
   // @Get()
   // findAll() {
   //   return this.usersService.findAll();

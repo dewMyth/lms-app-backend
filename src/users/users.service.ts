@@ -257,4 +257,86 @@ export class UsersService {
       user: updatedUserData,
     };
   }
+
+  async saveAvatar(avatarImg: Express.Multer.File, userId) {
+    const fileName = `${userId}_${Date.now()}_${avatarImg.originalname}`;
+
+    const { data, error } = await this.supabase.storage
+      .from('avatars')
+      .upload(fileName, avatarImg.buffer, {
+        contentType: avatarImg.mimetype,
+      });
+
+    if (error) {
+      return error;
+    }
+
+    if (error) {
+      return error;
+    }
+
+    const getPublicUrlofSubmittedAssignment = await this.supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    // Update user's avatar link
+    const user = await this.studentModel.findById(userId).lean().exec();
+
+    if (!user) {
+      throw new InternalServerErrorException('User not found');
+    }
+
+    let result;
+
+    try {
+      result = await this.studentModel.updateOne(
+        {
+          _id: userId,
+        },
+        {
+          $set: {
+            avatar: getPublicUrlofSubmittedAssignment.data.publicUrl,
+          },
+        },
+      );
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+    }
+
+    if (result.modifiedCount > 0) {
+      return {
+        status: HttpStatus.CREATED,
+        message: 'Avatar updated Successfully!',
+      };
+    } else {
+      return {
+        staus: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Avatar update not successful!',
+      };
+    }
+  }
+
+  async getAllUserData(userType, userId) {
+    let user;
+
+    if (userType == 'student') {
+      user = await this.studentModel.findById(userId).lean().exec();
+    }
+
+    if (userType == 'parent') {
+      user = await this.parentModel.findById(userId).lean().exec();
+    }
+
+    if (!user) {
+      return {
+        status: HttpStatus.NOT_FOUND,
+        message: `No User found with the given userId`,
+      };
+    }
+
+    return {
+      status: HttpStatus.OK,
+      userData: user,
+    };
+  }
 }
