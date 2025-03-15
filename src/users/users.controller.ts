@@ -28,6 +28,11 @@ export class UsersController {
     return this.usersService.loginStudent(enteredStudentData);
   }
 
+  @Post('edit-student')
+  editStudent(@Body() updatedUserData) {
+    return this.usersService.editStudent(updatedUserData);
+  }
+
   @Post('add-assignment/:assignmentId/:userId')
   addActivityToAssignments(
     @Param('assignmentId') assignmentId: string,

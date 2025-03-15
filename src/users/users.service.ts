@@ -234,4 +234,27 @@ export class UsersService {
       };
     }
   }
+
+  async editStudent(updatedUserData) {
+    const { userId } = updatedUserData;
+
+    const updatedResponse = await this.studentModel
+      .findByIdAndUpdate(userId, updatedUserData)
+      .catch((e) => {
+        throw new Error(`Updating user failed! due to : ${e.message}`);
+      });
+
+    if (!updatedResponse) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: `User - ${userId} update failed`,
+      };
+    }
+
+    return {
+      status: HttpStatus.OK,
+      message: `User - ${userId} update successfully.`,
+      user: updatedUserData,
+    };
+  }
 }

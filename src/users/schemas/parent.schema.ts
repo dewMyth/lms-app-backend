@@ -13,6 +13,9 @@ export class Parent {
 
   @Prop()
   students: string[];
+
+  @Prop({ default: '' })
+  avatar: string;
 }
 
 export const ParentSchema = SchemaFactory.createForClass(Parent);

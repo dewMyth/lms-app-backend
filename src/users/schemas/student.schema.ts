@@ -22,6 +22,12 @@ export class Student {
 
   @Prop()
   assignments: object[];
+
+  @Prop({ default: '' })
+  grade: string;
+
+  @Prop({ default: '' })
+  avatar: string;
 }
 
 export const StudentSchema = SchemaFactory.createForClass(Student);
