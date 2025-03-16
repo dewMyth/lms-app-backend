@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { SubjectContentService } from './subject-content.service';
 
 @Controller('subject-content')
@@ -26,5 +26,10 @@ export class SubjectContentController {
       grade,
       subject,
     );
+  }
+
+  @Post('create-activity')
+  createActivity(@Body() activityData) {
+    return this.subjectContentService.createActivity(activityData);
   }
 }

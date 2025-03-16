@@ -1,5 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import {
+  Activity,
+  ActivitySchema,
+} from 'src/subject-content/schemas/activity.schema';
 
 export type EventDocument = HydratedDocument<Event>;
 
@@ -33,6 +37,9 @@ export class Event {
 
   @Prop({ default: '' })
   url: string;
+
+  @Prop({ type: ActivitySchema }) // Embed Activity schema
+  activity: Activity;
 }
 
 export const EventSchema = SchemaFactory.createForClass(Event);
