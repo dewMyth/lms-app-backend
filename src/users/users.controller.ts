@@ -73,6 +73,11 @@ export class UsersController {
     return this.usersService.getAllUserData(userType, userId);
   }
 
+  @Get('all-students-stats-by-parent/:parentId')
+  getAllStudentsStatsByParent(@Param('parentId') parentId: string) {
+    return this.usersService.getAllStudentsStatsByParent(parentId);
+  }
+
   // @Get()
   // findAll() {
   //   return this.usersService.findAll();

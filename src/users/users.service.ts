@@ -60,19 +60,38 @@ export class UsersService {
       pin: sixDigitCode,
     };
 
+    // Search for parent
+    let parent = await this.parentModel
+      .findOne({
+        email: studentData.parentEmail,
+      })
+      .lean()
+      .exec();
+
     // Create Parent Object
-    const newParent = {
-      email: studentData.parents_email,
-      password: hashedPassword,
-      students: [studentData.email],
-    };
 
     // Save the student data to the database
     await this.studentModel
       .create(newStudent)
-      .then((res) => {
+      .then(async (res) => {
+        console.log(res._id);
+
         // Save the parent data to the database
-        this.parentModel.create(newParent);
+        if (!parent) {
+          const newParent = {
+            username: studentData.parentName,
+            email: studentData.parentEmail,
+            password: hashedPassword,
+            students: [res._id],
+          };
+
+          this.parentModel.create(newParent);
+        } else {
+          await this.parentModel.updateOne(
+            { _id: parent._id },
+            { $push: { students: res._id } },
+          );
+        }
       })
       .catch((err) => {
         throw new InternalServerErrorException(
@@ -83,7 +102,7 @@ export class UsersService {
     return {
       message: 'Student Account Created Successfully',
       student: newStudent,
-      parent: newParent,
+      // parent: newParent,
     };
   }
 
@@ -213,8 +232,10 @@ export class UsersService {
         {
           $set: {
             'assignments.$.submitted': true,
-            'assignments.$.file_link':
+            'assignments.$.submission_url':
               getPublicUrlofSubmittedAssignment.data.publicUrl,
+            'assignments.$.submitted_datetime': Date.now(),
+            'assignments.$.status': 'submitted',
           },
         },
       );
@@ -280,7 +301,14 @@ export class UsersService {
       .getPublicUrl(fileName);
 
     // Update user's avatar link
-    const user = await this.studentModel.findById(userId).lean().exec();
+    let user;
+    const student = await this.studentModel.findById(userId).lean().exec();
+
+    if (student) {
+      user = student;
+    } else {
+      user = await this.parentModel.findById(userId).lean().exec();
+    }
 
     if (!user) {
       throw new InternalServerErrorException('User not found');
@@ -289,16 +317,29 @@ export class UsersService {
     let result;
 
     try {
-      result = await this.studentModel.updateOne(
-        {
-          _id: userId,
-        },
-        {
-          $set: {
-            avatar: getPublicUrlofSubmittedAssignment.data.publicUrl,
+      if (student) {
+        result = await this.studentModel.updateOne(
+          {
+            _id: userId,
           },
-        },
-      );
+          {
+            $set: {
+              avatar: getPublicUrlofSubmittedAssignment.data.publicUrl,
+            },
+          },
+        );
+      } else {
+        result = await this.parentModel.updateOne(
+          {
+            _id: userId,
+          },
+          {
+            $set: {
+              avatar: getPublicUrlofSubmittedAssignment.data.publicUrl,
+            },
+          },
+        );
+      }
     } catch (error) {
       console.error('Error updating assignment:', error);
     }
@@ -338,5 +379,353 @@ export class UsersService {
       status: HttpStatus.OK,
       userData: user,
     };
+  }
+
+  async getAllStudentsStatsByParent(parentId) {
+    const parent = await this.parentModel.findById(parentId).lean().exec();
+
+    const studentsStats = await Promise.all(
+      parent?.students.map(async (student) => {
+        const studentData = await this.studentModel
+          .findById(student)
+          .lean()
+          .exec();
+
+        // Setup Pending Tasks
+        const pendingTasksRaw = studentData?.assignments?.filter(
+          (assignment: { status: string }) => assignment.status === 'pending',
+        );
+        const pendingTasksFormatted = pendingTasksRaw?.map(
+          (task: {
+            _id: string;
+            title: string;
+            subject: string;
+            started_datetime: string;
+            status: string;
+            type: string;
+          }) => {
+            return {
+              id: task._id.toString(),
+              title: task.title,
+              subject: task.subject,
+              dueDate: new Date(task.started_datetime + 24 * 60 * 60 * 1000)
+                .toISOString()
+                .split('T')[0],
+              status: task.status,
+              type: task.type,
+            };
+          },
+        );
+
+        // Setup Completed Tasks
+        const completedTasksRaw = studentData?.assignments?.filter(
+          (assignment: { status: string }) =>
+            assignment.status == 'completed' ||
+            assignment.status == 'submitted',
+        );
+        const completedTasksFormatted = completedTasksRaw?.map(
+          (task: {
+            _id: string;
+            title: string;
+            subject: string;
+            started_datetime: string;
+            status: string;
+            type: string;
+          }) => {
+            return {
+              id: task._id.toString(),
+              title: task.title,
+              subject: task.subject,
+              // TODO - Need to get the completed date
+              completedDate: new Date(1742620513370 + 24 * 60 * 60 * 1000)
+                .toISOString()
+                .split('T')[0],
+              status: task.status,
+              type: task.type,
+            };
+          },
+        );
+
+        return {
+          id: studentData?._id.toString(),
+          name: studentData?.username,
+          grade: studentData?.grade,
+          avatar: studentData?.avatar,
+          subjects: ['Sinhala', 'Mathematics', 'Environment'],
+          pendingTasks: pendingTasksFormatted,
+          completedTasks: completedTasksFormatted,
+
+          // TODO
+          upcomingEvents: [
+            {
+              id: 'event1',
+              title: 'Term Test - Sinhala',
+              date: '2025-03-25',
+              time: '9:00 AM',
+              type: 'exam',
+            },
+            {
+              id: 'event2',
+              title: 'Science Exhibition',
+              date: '2025-03-28',
+              time: '10:00 AM',
+              type: 'event',
+            },
+            {
+              id: 'event3',
+              title: 'Parent-Teacher Meeting',
+              date: '2025-04-02',
+              time: '3:30 PM',
+              type: 'meeting',
+            },
+          ],
+          progress: {
+            sinhala: 75,
+            mathematics: 68,
+            environment: 82,
+          },
+          recentActivity: [
+            {
+              id: 'activity1',
+              description: 'Completed Sinhala reading assignment',
+              timestamp: '2025-03-15T14:30:00',
+              type: 'completion',
+            },
+            {
+              id: 'activity2',
+              description: 'Watched 3 Mathematics video lessons',
+              timestamp: '2025-03-14T16:45:00',
+              type: 'learning',
+            },
+            {
+              id: 'activity3',
+              description: 'Started Environment project',
+              timestamp: '2025-03-13T10:15:00',
+              type: 'start',
+            },
+          ],
+          messages: [
+            {
+              id: 'msg1',
+              from: 'Ms. Kumari (Sinhala Teacher)',
+              content:
+                'Amal is showing great improvement in reading comprehension.',
+              timestamp: '2025-03-15T09:30:00',
+              read: false,
+            },
+            {
+              id: 'msg2',
+              from: 'Mr. Bandara (Principal)',
+              content:
+                'Reminder: School will be closed on March 24th for staff development.',
+              timestamp: '2025-03-14T11:20:00',
+              read: true,
+            },
+          ],
+          // End TODO
+        };
+      }) || [],
+    );
+
+    return studentsStats;
+
+    // return [
+    //   {
+    //     id: 'child1',
+    //     name: 'Amal Perera',
+    //     grade: 'Grade 3',
+    //     avatar: '/placeholder.svg?height=40&width=40&text=AP',
+    //     subjects: ['Sinhala', 'Mathematics', 'Environment'],
+    //     pendingTasks: [
+    //       {
+    //         id: 'task1',
+    //         title: 'පූර්ව භාෂා කුසලතා - ක්‍රියාකාරකම් පත්‍රිකාව',
+    //         subject: 'Sinhala',
+    //         dueDate: '2025-03-20',
+    //         status: 'pending',
+    //         type: 'assignment',
+    //       },
+    //       {
+    //         id: 'task2',
+    //         title: 'ගණිත ගැටළු විසඳීම - පිළිතුරු පත්‍රය',
+    //         subject: 'Mathematics',
+    //         dueDate: '2025-03-18',
+    //         status: 'pending',
+    //         type: 'worksheet',
+    //       },
+    //       {
+    //         id: 'task3',
+    //         title: 'පරිසර අධ්‍යයනය - ශාක වර්ග හඳුනා ගැනීම',
+    //         subject: 'Environment',
+    //         dueDate: '2025-03-22',
+    //         status: 'pending',
+    //         type: 'project',
+    //       },
+    //     ],
+    //     completedTasks: [
+    //       {
+    //         id: 'task4',
+    //         title: 'අකුරු ලිවීම - පුහුණු පත්‍රිකාව',
+    //         subject: 'Sinhala',
+    //         completedDate: '2025-03-15',
+    //         grade: 'A',
+    //         type: 'worksheet',
+    //       },
+    //       {
+    //         id: 'task5',
+    //         title: 'සංඛ්‍යා හඳුනා ගැනීම - පරීක්ෂණය',
+    //         subject: 'Mathematics',
+    //         completedDate: '2025-03-14',
+    //         grade: 'B+',
+    //         type: 'quiz',
+    //       },
+    //     ],
+    //     upcomingEvents: [
+    //       {
+    //         id: 'event1',
+    //         title: 'Term Test - Sinhala',
+    //         date: '2025-03-25',
+    //         time: '9:00 AM',
+    //         type: 'exam',
+    //       },
+    //       {
+    //         id: 'event2',
+    //         title: 'Science Exhibition',
+    //         date: '2025-03-28',
+    //         time: '10:00 AM',
+    //         type: 'event',
+    //       },
+    //       {
+    //         id: 'event3',
+    //         title: 'Parent-Teacher Meeting',
+    //         date: '2025-04-02',
+    //         time: '3:30 PM',
+    //         type: 'meeting',
+    //       },
+    //     ],
+    //     progress: {
+    //       sinhala: 75,
+    //       mathematics: 68,
+    //       environment: 82,
+    //     },
+    //     recentActivity: [
+    //       {
+    //         id: 'activity1',
+    //         description: 'Completed Sinhala reading assignment',
+    //         timestamp: '2025-03-15T14:30:00',
+    //         type: 'completion',
+    //       },
+    //       {
+    //         id: 'activity2',
+    //         description: 'Watched 3 Mathematics video lessons',
+    //         timestamp: '2025-03-14T16:45:00',
+    //         type: 'learning',
+    //       },
+    //       {
+    //         id: 'activity3',
+    //         description: 'Started Environment project',
+    //         timestamp: '2025-03-13T10:15:00',
+    //         type: 'start',
+    //       },
+    //     ],
+    //     messages: [
+    //       {
+    //         id: 'msg1',
+    //         from: 'Ms. Kumari (Sinhala Teacher)',
+    //         content:
+    //           'Amal is showing great improvement in reading comprehension.',
+    //         timestamp: '2025-03-15T09:30:00',
+    //         read: false,
+    //       },
+    //       {
+    //         id: 'msg2',
+    //         from: 'Mr. Bandara (Principal)',
+    //         content:
+    //           'Reminder: School will be closed on March 24th for staff development.',
+    //         timestamp: '2025-03-14T11:20:00',
+    //         read: true,
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     id: 'child2',
+    //     name: 'Sithmi Perera',
+    //     grade: 'Grade 1',
+    //     avatar: '/placeholder.svg?height=40&width=40&text=SP',
+    //     subjects: ['Sinhala', 'Mathematics', 'Environment'],
+    //     pendingTasks: [
+    //       {
+    //         id: 'task6',
+    //         title: 'අකුරු හඳුනා ගැනීම - පුහුණු පත්‍රිකාව',
+    //         subject: 'Sinhala',
+    //         dueDate: '2025-03-19',
+    //         status: 'pending',
+    //         type: 'worksheet',
+    //       },
+    //       {
+    //         id: 'task7',
+    //         title: 'සංඛ්‍යා ගණනය - ක්‍රියාකාරකම්',
+    //         subject: 'Mathematics',
+    //         dueDate: '2025-03-21',
+    //         status: 'pending',
+    //         type: 'activity',
+    //       },
+    //     ],
+    //     completedTasks: [
+    //       {
+    //         id: 'task8',
+    //         title: 'පාට හඳුනා ගැනීම - ක්‍රියාකාරකම්',
+    //         subject: 'Environment',
+    //         completedDate: '2025-03-16',
+    //         grade: 'A',
+    //         type: 'activity',
+    //       },
+    //     ],
+    //     upcomingEvents: [
+    //       {
+    //         id: 'event4',
+    //         title: 'Class Photo Day',
+    //         date: '2025-03-26',
+    //         time: '10:30 AM',
+    //         type: 'event',
+    //       },
+    //       {
+    //         id: 'event5',
+    //         title: 'Reading Assessment',
+    //         date: '2025-03-29',
+    //         time: '9:00 AM',
+    //         type: 'assessment',
+    //       },
+    //     ],
+    //     progress: {
+    //       sinhala: 65,
+    //       mathematics: 70,
+    //       environment: 80,
+    //     },
+    //     recentActivity: [
+    //       {
+    //         id: 'activity4',
+    //         description: 'Completed color identification activity',
+    //         timestamp: '2025-03-16T13:20:00',
+    //         type: 'completion',
+    //       },
+    //       {
+    //         id: 'activity5',
+    //         description: 'Practiced writing letters',
+    //         timestamp: '2025-03-15T11:30:00',
+    //         type: 'learning',
+    //       },
+    //     ],
+    //     messages: [
+    //       {
+    //         id: 'msg3',
+    //         from: 'Ms. Dilhani (Class Teacher)',
+    //         content: 'Sithmi is adapting well to the classroom environment.',
+    //         timestamp: '2025-03-16T14:45:00',
+    //         read: false,
+    //       },
+    //     ],
+    //   },
+    // ];
   }
 }
