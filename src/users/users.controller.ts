@@ -78,6 +78,30 @@ export class UsersController {
     return this.usersService.getAllStudentsStatsByParent(parentId);
   }
 
+  @Post('create-teacher')
+  createTeacher(@Body() enteredTeacherData) {
+    return this.usersService.createTeacherAccount(enteredTeacherData);
+  }
+
+  @Get('get-all-teachers')
+  getAllTeachers() {
+    return this.usersService.getAllTeachers();
+  }
+
+  @Get('get-all-submitted-assignments')
+  getAllSubmittedAssignments() {
+    return this.usersService.getAllSubmittedAssignmentsOfStudents();
+  }
+
+  @Post('grading/:assignmentId/:userId')
+  grading(
+    @Param('assignmentId') assignmentId: string,
+    @Param('userId') userId: string,
+    @Body() gradingData,
+  ) {
+    return this.usersService.gradeAssignment(assignmentId, userId, gradingData);
+  }
+
   // @Get()
   // findAll() {
   //   return this.usersService.findAll();

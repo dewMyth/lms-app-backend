@@ -23,11 +23,17 @@ export class Activity {
   @Prop()
   type: string;
 
-  @Prop()
-  dueDate: string;
+  @Prop({ default: '' })
+  description: string;
 
-  @Prop()
-  pass_marks: string;
+  @Prop({ default: 24 })
+  duration: number;
+
+  @Prop({ default: 50 })
+  pass_marks: number;
+
+  @Prop({ default: () => new Date().toISOString() })
+  createdAt: string;
 }
 
 export const ActivitySchema = SchemaFactory.createForClass(Activity);

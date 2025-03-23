@@ -16,7 +16,16 @@ export class SubjectContentService {
   async createActivity(activityData) {
     // Create a new Activity Object
     const newActivity = {
-      ...activityData,
+      title: activityData.title,
+      file_link: activityData.fileLink,
+      grade: activityData.grade,
+      subject: activityData.subject,
+      term: activityData.term,
+      type: activityData.type,
+      description: activityData.description,
+      duration: activityData.duration,
+      pass_marks: activityData.passMarks,
+      createdAt: new Date().toISOString(),
     };
 
     // Save the activity data to the database
@@ -46,5 +55,26 @@ export class SubjectContentService {
   // Get Video lessons by Grade andSubject
   async getVideoLessonsByGradeAndSubject(grade, subject) {
     return await this.videoLessonModel.find({ grade, subject });
+  }
+
+  async getAllActivities() {
+    const activitiesRaw = await this.activityModel.find();
+
+    const activities = activitiesRaw.map((activity) => {
+      return {
+        id: activity._id.toString(),
+        title: activity.title,
+        fileLink: activity.file_link,
+        grade: activity.grade,
+        subject: activity.subject,
+        term: activity.term,
+        duration: activity.duration,
+        description: '',
+        activityType: activity.type,
+        createdAt: activity.createdAt,
+      };
+    });
+
+    return activities;
   }
 }

@@ -9,6 +9,7 @@ import {
   Activity,
   ActivitySchema,
 } from 'src/subject-content/schemas/activity.schema';
+import { TeacherSchema } from './schemas/teacher.schema';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import {
     MongooseModule.forFeature([
       { name: Activity.name, schema: ActivitySchema },
     ]),
+    MongooseModule.forFeature([{ name: 'Teacher', schema: TeacherSchema }]),
   ],
 
   controllers: [UsersController],

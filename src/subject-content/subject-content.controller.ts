@@ -32,4 +32,9 @@ export class SubjectContentController {
   createActivity(@Body() activityData) {
     return this.subjectContentService.createActivity(activityData);
   }
+
+  @Get('get-all-activities')
+  getAllActivities() {
+    return this.subjectContentService.getAllActivities();
+  }
 }

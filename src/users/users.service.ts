@@ -16,6 +16,8 @@ import { Activity } from 'src/subject-content/schemas/activity.schema';
 // import { UpdateUserDto } from './dto/update-user.dto';
 
 import { createClient } from '@supabase/supabase-js';
+import { Teacher } from './schemas/teacher.schema';
+import { Subject } from 'rxjs';
 
 @Injectable()
 export class UsersService {
@@ -25,6 +27,7 @@ export class UsersService {
     @InjectModel(Student.name) private studentModel: Model<Student>,
     @InjectModel(Parent.name) private parentModel: Model<Parent>,
     @InjectModel(Activity.name) private activityModel: Model<Activity>,
+    @InjectModel(Teacher.name) private teacherModel: Model<Teacher>,
     private _utilService: UtilService,
   ) {
     this.supabase = createClient(
@@ -113,14 +116,17 @@ export class UsersService {
     // Find the student with the email
     const student = await this.studentModel.findOne({ email }).lean().exec();
     const parent = await this.parentModel.findOne({ email }).lean().exec();
+    const teacher = await this.teacherModel.findOne({ email }).lean().exec();
 
-    if (!student && !parent) {
+    if (!student && !parent && !teacher) {
       throw new BadRequestException(
-        `No Student or Parent with the relevant email`,
+        `No Student, Parent or a Teacher with the relevant email`,
       );
     }
 
-    let logggedUser: any = student ? student : parent;
+    // Check whether a teacher or not
+
+    let logggedUser: any = student || parent || teacher;
 
     if (logggedUser) {
       // Password Validation
@@ -141,12 +147,12 @@ export class UsersService {
     logggedUser = {
       ...logggedUser,
       token,
-      userType: student ? 'student' : 'parent',
+      userType: student ? 'student' : parent ? 'parent' : 'teacher',
     };
 
     return {
       status: HttpStatus.OK,
-      message: `User - ${logggedUser.userName} : ${logggedUser.email} logged in successfully.`,
+      message: `User - ${logggedUser.username} : ${logggedUser.email} logged in successfully.`,
       user: logggedUser,
     };
   }
@@ -166,7 +172,7 @@ export class UsersService {
     }
 
     // Add New Fields to Assignments Object
-    assignment['your_marks'] = null;
+    assignment['your_marks'] = 0;
     assignment['submitted'] = false;
     assignment['status'] = 'pending';
     assignment['started_datetime'] = Date.now();
@@ -302,6 +308,7 @@ export class UsersService {
 
     // Update user's avatar link
     let user;
+    let teacher;
     const student = await this.studentModel.findById(userId).lean().exec();
 
     if (student) {
@@ -311,12 +318,29 @@ export class UsersService {
     }
 
     if (!user) {
-      throw new InternalServerErrorException('User not found');
+      teacher = await this.teacherModel.findById(userId).lean().exec();
+
+      if (!teacher) {
+        throw new InternalServerErrorException('User not found');
+      }
     }
 
     let result;
 
     try {
+      if (teacher) {
+        result = await this.teacherModel.updateOne(
+          {
+            _id: userId,
+          },
+          {
+            $set: {
+              avatar: getPublicUrlofSubmittedAssignment.data.publicUrl,
+            },
+          },
+        );
+      }
+
       if (student) {
         result = await this.studentModel.updateOne(
           {
@@ -727,5 +751,226 @@ export class UsersService {
     //     ],
     //   },
     // ];
+  }
+
+  async createTeacherAccount(newTeacherData) {
+    // Hash the Password
+    const { password } = newTeacherData;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate a PIN
+    const sixDigitCode = this._utilService.generateSixDigitCode();
+
+    // Find a teacher with the same email
+    const teacher = await this.teacherModel.findOne({
+      email: newTeacherData.email,
+    });
+
+    if (teacher) {
+      throw new InternalServerErrorException(
+        'Teacher with the same email already exists',
+      );
+    }
+
+    // Create Teacher Object
+    const newTeacher = {
+      ...newTeacherData,
+      password: hashedPassword,
+      pin: sixDigitCode,
+    };
+
+    // Save the teacher data to the database
+    await this.teacherModel
+      .create(newTeacher)
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((err) => {
+        throw new InternalServerErrorException(
+          `Error while saving user. Reason: ${err.message}`,
+        );
+      });
+
+    return {
+      message: 'Teacher Account Created Successfully',
+      teacher: newTeacher,
+    };
+  }
+
+  async getAllTeachers() {
+    const teachersRaw = await this.teacherModel.find().lean().exec();
+
+    const teachersFormatted = teachersRaw.map((teacher) => {
+      return {
+        id: teacher._id.toString(),
+        name: teacher.username,
+        email: teacher.email,
+        grade: teacher.grade,
+        subject: teacher.subject,
+        role: teacher.role,
+        status: teacher.status,
+        avatar: teacher.avatar,
+      };
+    });
+
+    return teachersFormatted;
+  }
+
+  async getAllSubmittedAssignmentsOfStudents() {
+    // Find the Student's assignments that are submitted or completed
+    // const assignmentsSubmittedOrCompletedRaw = await this.studentModel
+    //   .find(
+    //     {
+    //       assignments: {
+    //         $elemMatch: {
+    //           status: { $in: ['submitted', 'completed'] },
+    //         },
+    //       },
+    //     },
+    //     {
+    //       _id: 0, // Exclude the _id from the parent level
+    //       assignments: {
+    //         $map: {
+    //           input: {
+    //             $filter: {
+    //               input: '$assignments',
+    //               as: 'assignment',
+    //               cond: {
+    //                 $in: ['$$assignment.status', ['submitted', 'completed']],
+    //               },
+    //             },
+    //           },
+    //           as: 'assignment',
+    //           in: {
+    //             user_id: '$_id', // Add user_id (student _id)
+    //             username: '$username', // Add username from the student
+    //             assignment_id: '$$assignment._id', // Add assignment's own _id
+    //             title: '$$assignment.title',
+    //             file_link: '$$assignment.file_link',
+    //             grade: '$$assignment.grade',
+    //             subject: '$$assignment.subject',
+    //             term: '$$assignment.term',
+    //             type: '$$assignment.type',
+    //             __v: '$$assignment.__v',
+    //             your_marks: '$$assignment.your_marks',
+    //             submitted: '$$assignment.submitted',
+    //             status: '$$assignment.status',
+    //             started_datetime: '$$assignment.started_datetime',
+    //             submission_url: '$$assignment.submission_url',
+    //             submitted_datetime: '$$assignment.submitted_datetime',
+    //           },
+    //         },
+    //       },
+    //     },
+    //   )
+    //   .lean()
+    //   .exec();
+
+    const assignmentsSubmittedOrCompletedRaw = await this.studentModel
+      .aggregate([
+        {
+          $match: {
+            assignments: {
+              $elemMatch: {
+                status: { $in: ['submitted', 'completed'] },
+              },
+            },
+          },
+        },
+        {
+          $unwind: '$assignments', // Unwind the assignments array to get each assignment as an individual document
+        },
+        {
+          $match: {
+            // Filter out assignments that are 'submitted' or 'completed'
+            'assignments.status': { $in: ['submitted', 'completed'] },
+          },
+        },
+        {
+          $project: {
+            // Project the desired fields
+            _id: 0, // Exclude the parent _id
+            user_id: '$_id', // Add the student _id as user_id
+            username: 1, // Include the student's username
+            assignment_id: '$assignments._id', // Add assignment _id
+            title: '$assignments.title',
+            file_link: '$assignments.file_link',
+            grade: '$assignments.grade',
+            subject: '$assignments.subject',
+            term: '$assignments.term',
+            type: '$assignments.type',
+            __v: '$assignments.__v',
+            your_marks: '$assignments.your_marks',
+            submitted: '$assignments.submitted',
+            status: '$assignments.status',
+            started_datetime: '$assignments.started_datetime',
+            submission_url: '$assignments.submission_url',
+            submitted_datetime: '$assignments.submitted_datetime',
+          },
+        },
+      ])
+      .exec();
+
+    console.log(assignmentsSubmittedOrCompletedRaw);
+
+    // Return
+    const completedOrSubmittedAssignments =
+      assignmentsSubmittedOrCompletedRaw.map((assignment) => {
+        return {
+          id: assignment.assignment_id.toString(),
+          studentId: assignment.user_id.toString(),
+          title: assignment.title,
+          student: assignment.username,
+          grade: assignment.grade,
+          subject: assignment.subject,
+          submittedDate: assignment?.submitted_datetime
+            ? new Date(assignment?.submitted_datetime)
+                .toISOString()
+                .slice(0, 19)
+            : 0,
+          status: assignment.status,
+          fileUrl: assignment.submission_url,
+          mark: assignment.your_marks,
+          feedback: '',
+          type: assignment.type,
+          term: assignment.term,
+          assignment_file: assignment.file_link,
+          started_datetime: assignment?.submitted_datetime
+            ? new Date(assignment?.started_datetime).toISOString().slice(0, 19)
+            : 0,
+        };
+      });
+
+    return completedOrSubmittedAssignments;
+  }
+
+  async gradeAssignment(assignmentId, userId, gradingData) {
+    const assignmentObjectId = new mongoose.Types.ObjectId(assignmentId);
+
+    const studentData = await this.studentModel
+      .findOne({ _id: userId, 'assignments._id': assignmentObjectId })
+      .lean()
+      .exec();
+
+    // Get User by User Id
+    const updatedStudent = await this.studentModel
+      .findOneAndUpdate(
+        {
+          _id: userId,
+          'assignments._id': assignmentObjectId,
+        },
+        {
+          $set: {
+            'assignments.$.status': 'completed',
+            'assignments.$.feedback': gradingData.feedback,
+            'assignments.$.your_marks': gradingData.mark,
+          },
+        },
+        { new: true }, // Returns the updated document
+      )
+      .lean()
+      .exec();
+
+    return updatedStudent;
   }
 }
