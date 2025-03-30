@@ -8,6 +8,7 @@ import {
   Activity,
   ActivitySchema,
 } from 'src/subject-content/schemas/activity.schema';
+import { UtilService } from 'src/util.service';
 
 @Module({
   imports: [
@@ -17,6 +18,6 @@ import {
     ]),
   ],
   controllers: [EventsController],
-  providers: [EventsService],
+  providers: [EventsService, UtilService],
 })
 export class EventsModule {}

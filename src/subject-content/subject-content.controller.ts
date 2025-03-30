@@ -37,4 +37,14 @@ export class SubjectContentController {
   getAllActivities() {
     return this.subjectContentService.getAllActivities();
   }
+
+  @Post('create-video-lesson')
+  createVideoLesson(@Body() videoLessonData) {
+    return this.subjectContentService.createVideoLesson(videoLessonData);
+  }
+
+  @Get('get-all-video-lessons')
+  getAllVideoLessons() {
+    return this.subjectContentService.getAllVideoLessons();
+  }
 }

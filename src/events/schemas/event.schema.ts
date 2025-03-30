@@ -40,6 +40,12 @@ export class Event {
 
   @Prop({ type: ActivitySchema }) // Embed Activity schema
   activity: Activity;
+
+  @Prop({ default: new Date().toISOString().split('T')[0] }) // Embed Activity schema
+  date: string;
+
+  @Prop({ default: 'all' }) // Embed Activity schema
+  grade: string;
 }
 
 export const EventSchema = SchemaFactory.createForClass(Event);

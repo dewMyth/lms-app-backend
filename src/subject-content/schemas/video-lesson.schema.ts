@@ -14,8 +14,20 @@ export class VideoLesson {
   @Prop()
   subject: string;
 
-  @Prop()
+  @Prop({ default: 'Grade ' })
   grade: string;
+
+  @Prop({ default: 'Learn the basics of fractions and how to represent them.' })
+  description: string;
+
+  @Prop({
+    default:
+      'https://riggswealth.com/wp-content/uploads/2016/06/Riggs-Video-Placeholder.jpg',
+  })
+  thumbnail: string;
+
+  @Prop({ default: () => new Date().toISOString() })
+  createdAt: string;
 }
 
 export const VideoLessonSchema = SchemaFactory.createForClass(VideoLesson);

@@ -4,6 +4,7 @@ import { SubjectContentController } from './subject-content.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Activity, ActivitySchema } from './schemas/activity.schema';
 import { VideoLesson, VideoLessonSchema } from './schemas/video-lesson.schema';
+import { UtilService } from 'src/util.service';
 
 @Module({
   imports: [
@@ -15,6 +16,6 @@ import { VideoLesson, VideoLessonSchema } from './schemas/video-lesson.schema';
     ]),
   ],
   controllers: [SubjectContentController],
-  providers: [SubjectContentService],
+  providers: [SubjectContentService, UtilService],
 })
 export class SubjectContentModule {}

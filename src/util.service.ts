@@ -21,4 +21,18 @@ export class UtilService {
     const options = { timeZone: 'Asia/Colombo', hour12: false };
     return date.toLocaleString('en-US', options);
   };
+
+  getYouTubeId = (url) => {
+    const match = url.match(
+      /(?:youtu\.be\/|youtube\.com\/(?:.*v=|embed\/|v\/))([\w-]{11})/,
+    );
+    return match ? match[1] : null;
+  };
+
+  getEpochTime = (date, time) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const eventDate = new Date(date);
+    eventDate.setHours(hours, minutes, 0, 0); // Set time in local timezone
+    return eventDate.getTime(); // Get epoch timestamp in milliseconds
+  };
 }

@@ -15,4 +15,9 @@ export class EventsController {
   getAllEventsByUserId(@Param('userId') userId) {
     return this.eventsService.getAllEventsByStudentId(userId);
   }
+
+  @Get('get-all-teacher-events')
+  getAllEventsForTeacher() {
+    return this.eventsService.getAllEventsForTeacher();
+  }
 }

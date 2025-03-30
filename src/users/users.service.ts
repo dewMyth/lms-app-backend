@@ -77,8 +77,6 @@ export class UsersService {
     await this.studentModel
       .create(newStudent)
       .then(async (res) => {
-        console.log(res._id);
-
         // Save the parent data to the database
         if (!parent) {
           const newParent = {
@@ -783,7 +781,7 @@ export class UsersService {
     await this.teacherModel
       .create(newTeacher)
       .then((res) => {
-        console.log(res);
+        // console.log(res);
       })
       .catch((err) => {
         throw new InternalServerErrorException(
@@ -910,8 +908,6 @@ export class UsersService {
         },
       ])
       .exec();
-
-    console.log(assignmentsSubmittedOrCompletedRaw);
 
     // Return
     const completedOrSubmittedAssignments =
