@@ -14,6 +14,8 @@ import {
   VideoLessonSchema,
 } from './subject-content/schemas/video-lesson.schema';
 import { EventsModule } from './events/events.module';
+import { OnlineGateway } from './gateways/socket.gateway';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -29,8 +31,9 @@ import { EventsModule } from './events/events.module';
     MongooseModule.forFeature([
       { name: VideoLesson.name, schema: VideoLessonSchema },
     ]),
+    ChatModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, OnlineGateway],
 })
 export class AppModule {}

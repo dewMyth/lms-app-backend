@@ -969,4 +969,25 @@ export class UsersService {
 
     return updatedStudent;
   }
+
+  async getTeachersByGrade(grade) {
+    const teachers = await this.teacherModel
+      .find({ grade: `Grade ${grade}` })
+      .lean()
+      .exec();
+
+    //     id: "67df7c3eb64eaab287809bce",
+    // name: "Mrs. Davis",
+    // subject: "English",
+    // avatar: "/placeholder.svg?height=40&width=40",
+
+    return teachers.map((teacher) => {
+      return {
+        id: teacher._id.toString(),
+        name: teacher.username,
+        subject: teacher.subject,
+        avatar: teacher.avatar,
+      };
+    });
+  }
 }

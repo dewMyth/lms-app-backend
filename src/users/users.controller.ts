@@ -102,6 +102,11 @@ export class UsersController {
     return this.usersService.gradeAssignment(assignmentId, userId, gradingData);
   }
 
+  @Get('get-teachers-by-grade/:grade')
+  getTeachersByGrade(@Param('grade') grade) {
+    return this.usersService.getTeachersByGrade(grade);
+  }
+
   // @Get()
   // findAll() {
   //   return this.usersService.findAll();
