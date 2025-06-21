@@ -161,7 +161,7 @@ export class UsersService {
 
     // Log the action
     await this.logModel.create({
-      message: `User - ${logggedUser.username} : ${logggedUser.email} logged in successfully at ${new Date().toISOString().slice(0, 19)}`,
+      message: `User - ${logggedUser.username} : ${logggedUser.email} logged in successfully`,
       action: LogAction.LOGIN_STUDENT,
     });
 
