@@ -4,12 +4,15 @@ import { Activity } from './schemas/activity.schema';
 import { VideoLesson } from './schemas/video-lesson.schema';
 import { Model } from 'mongoose';
 import { UtilService } from 'src/util.service';
+import { Log } from 'src/stats/schema/log.schema';
+import { LogAction } from 'src/stats/types/log-action.types';
 
 @Injectable()
 export class SubjectContentService {
   constructor(
     @InjectModel(Activity.name) private activityModel: Model<Activity>,
     @InjectModel(VideoLesson.name) private videoLessonModel: Model<VideoLesson>,
+    @InjectModel(Log.name) private logModel: Model<Log>,
     private _utilService: UtilService,
   ) {}
 
@@ -32,6 +35,12 @@ export class SubjectContentService {
     // Save the activity data to the database
     await this.activityModel.create(newActivity).then((res) => {
       return res;
+    });
+
+    // Log the action
+    await this.logModel.create({
+      message: `New activity ${newActivity.title} created`,
+      action: LogAction.CREATE_ACTIVITY,
     });
   }
 
@@ -71,6 +80,12 @@ export class SubjectContentService {
     const res = await this.videoLessonModel.create(newVideoLesson);
 
     if (res) {
+      // Log the action
+      await this.logModel.create({
+        message: `New video lesson ${newVideoLesson.title} created`,
+        action: LogAction.CREATE_VIDEO_LESSON,
+      });
+
       return {
         status: HttpStatus.CREATED,
         message: `New Video Lesson Created!`,

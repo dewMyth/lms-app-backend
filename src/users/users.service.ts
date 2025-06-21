@@ -18,6 +18,9 @@ import { Activity } from 'src/subject-content/schemas/activity.schema';
 import { createClient } from '@supabase/supabase-js';
 import { Teacher } from './schemas/teacher.schema';
 import { Subject } from 'rxjs';
+import { Admin } from './schemas/admin.schema';
+import { LogAction } from 'src/stats/types/log-action.types';
+import { Log } from 'src/stats/schema/log.schema';
 
 @Injectable()
 export class UsersService {
@@ -28,6 +31,8 @@ export class UsersService {
     @InjectModel(Parent.name) private parentModel: Model<Parent>,
     @InjectModel(Activity.name) private activityModel: Model<Activity>,
     @InjectModel(Teacher.name) private teacherModel: Model<Teacher>,
+    @InjectModel(Admin.name) private adminModel: Model<Admin>,
+    @InjectModel(Log.name) private logModel: Model<Log>,
     private _utilService: UtilService,
   ) {
     this.supabase = createClient(
@@ -100,6 +105,12 @@ export class UsersService {
         );
       });
 
+    // Log the action
+    await this.logModel.create({
+      message: `New student ${newStudent.username} enrolled`,
+      action: LogAction.CREATE_STUDENT_ACCOUNT,
+    });
+
     return {
       message: 'Student Account Created Successfully',
       student: newStudent,
@@ -148,10 +159,74 @@ export class UsersService {
       userType: student ? 'student' : parent ? 'parent' : 'teacher',
     };
 
+    // Log the action
+    await this.logModel.create({
+      message: `User - ${logggedUser.username} : ${logggedUser.email} logged in successfully at ${new Date().toISOString().slice(0, 19)}`,
+      action: LogAction.LOGIN_STUDENT,
+    });
+
     return {
       status: HttpStatus.OK,
       message: `User - ${logggedUser.username} : ${logggedUser.email} logged in successfully.`,
       user: logggedUser,
+    };
+  }
+
+  async loginAdmin(loginCredentials) {
+    const { email, password } = loginCredentials;
+
+    const admin = await this.adminModel.findOne({ email }).lean().exec();
+
+    if (!admin) {
+      throw new BadRequestException(`No Admin with the relevant email`);
+    }
+
+    const isMatched = await bcrypt.compare(password, admin.password);
+
+    if (!isMatched) {
+      throw new BadRequestException(`Invalid Password`);
+    }
+
+    const token = this._utilService.generateJWTToken(admin);
+
+    // delete admin.password;
+
+    // Log the action
+    await this.logModel.create({
+      message: `Admin - ${admin.username} : ${admin.email} logged in successfully`,
+      action: LogAction.LOGIN_ADMIN,
+    });
+
+    return {
+      status: HttpStatus.OK,
+      message: `Admin - ${admin.username} : ${admin.email} logged in successfully.`,
+      admin: {
+        ...admin,
+        token,
+      },
+    };
+  }
+
+  async createAdminAccount(adminData) {
+    const { password } = adminData;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newAdmin = {
+      ...adminData,
+      password: hashedPassword,
+    };
+
+    await this.adminModel.create(newAdmin);
+
+    // Log the action
+    await this.logModel.create({
+      message: `New admin ${newAdmin.username} created`,
+      action: LogAction.CREATE_ADMIN_ACCOUNT,
+    });
+
+    return {
+      message: 'Admin Account Created Successfully',
+      admin: newAdmin,
     };
   }
 
@@ -184,6 +259,12 @@ export class UsersService {
     if (!res) {
       throw new InternalServerErrorException();
     }
+
+    // Log the action
+    await this.logModel.create({
+      message: `New activity ${assignment.title} added to the user ${user.username}`,
+      action: LogAction.ADD_ACTIVITY_TO_ASSIGNMENTS,
+    });
 
     return {
       status: 200,
@@ -248,6 +329,12 @@ export class UsersService {
     }
 
     if (result.modifiedCount > 0) {
+      // Log the action
+      await this.logModel.create({
+        message: `Assignment ${assignmentId} submitted by ${userId}`,
+        action: LogAction.SUBMIT_ASSIGNMENT,
+      });
+
       return {
         status: HttpStatus.CREATED,
         message: 'Assignment Upload Successful!',
@@ -275,6 +362,12 @@ export class UsersService {
         message: `User - ${userId} update failed`,
       };
     }
+
+    // Log the action
+    await this.logModel.create({
+      message: `User - ${userId} updated successfully`,
+      action: LogAction.EDIT_STUDENT,
+    });
 
     return {
       status: HttpStatus.OK,
@@ -789,6 +882,12 @@ export class UsersService {
         );
       });
 
+    // Log the action
+    await this.logModel.create({
+      message: `New teacher ${newTeacher.username} created`,
+      action: LogAction.CREATE_TEACHER_ACCOUNT,
+    });
+
     return {
       message: 'Teacher Account Created Successfully',
       teacher: newTeacher,
@@ -812,6 +911,35 @@ export class UsersService {
     });
 
     return teachersFormatted;
+  }
+
+  async getAllStudents() {
+    const studentsRaw = await this.studentModel.find().lean().exec();
+
+    // Students Formatted Expectations
+    // interface Student {
+    //   _id: string;
+    //   email: string;
+    //   username: string;
+    //   parents_email: string;
+    //   no_of_assignments: number;
+    //   grade: string;
+    //   avatar: string;
+    // }
+
+    const studentsFormatted = studentsRaw.map((student) => {
+      return {
+        id: student._id.toString(),
+        email: student.email,
+        username: student.username,
+        parents_email: student.parents_email,
+        no_of_assignments: student.assignments.length || 0,
+        grade: student.grade,
+        avatar: student.avatar,
+      };
+    });
+
+    return studentsFormatted;
   }
 
   async getAllSubmittedAssignmentsOfStudents() {

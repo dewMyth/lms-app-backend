@@ -1,17 +1,16 @@
 import { Module } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { UsersController } from './users.controller';
+import { StatsService } from './stats.service';
+import { StatsController } from './stats.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Student, StudentSchema } from './schemas/student.schema';
-import { Parent, ParentSchema } from './schemas/parent.schema';
-import { UtilService } from 'src/util.service';
+import { Student, StudentSchema } from 'src/users/schemas/student.schema';
+import { Parent, ParentSchema } from 'src/users/schemas/parent.schema';
+import { Admin, AdminSchema } from 'src/users/schemas/admin.schema';
 import {
   Activity,
   ActivitySchema,
 } from 'src/subject-content/schemas/activity.schema';
-import { TeacherSchema } from './schemas/teacher.schema';
-import { Admin, AdminSchema } from './schemas/admin.schema';
-import { Log, LogSchema } from 'src/stats/schema/log.schema';
+import { TeacherSchema } from 'src/users/schemas/teacher.schema';
+import { Log, LogSchema } from './schema/log.schema';
 
 @Module({
   imports: [
@@ -24,8 +23,7 @@ import { Log, LogSchema } from 'src/stats/schema/log.schema';
     MongooseModule.forFeature([{ name: 'Teacher', schema: TeacherSchema }]),
     MongooseModule.forFeature([{ name: Log.name, schema: LogSchema }]),
   ],
-
-  controllers: [UsersController],
-  providers: [UsersService, UtilService],
+  controllers: [StatsController],
+  providers: [StatsService],
 })
-export class UsersModule {}
+export class StatsModule {}

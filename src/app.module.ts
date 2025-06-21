@@ -16,6 +16,7 @@ import {
 import { EventsModule } from './events/events.module';
 import { OnlineGateway } from './gateways/socket.gateway';
 import { ChatModule } from './chat/chat.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ChatModule } from './chat/chat.module';
       { name: VideoLesson.name, schema: VideoLessonSchema },
     ]),
     ChatModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService, OnlineGateway],

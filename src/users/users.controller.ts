@@ -107,6 +107,21 @@ export class UsersController {
     return this.usersService.getTeachersByGrade(grade);
   }
 
+  @Post('login-admin')
+  loginAdmin(@Body() loginCredentials) {
+    return this.usersService.loginAdmin(loginCredentials);
+  }
+
+  @Post('create-admin')
+  createAdmin(@Body() adminData) {
+    return this.usersService.createAdminAccount(adminData);
+  }
+
+  @Get('get-all-students')
+  getAllStudents() {
+    return this.usersService.getAllStudents();
+  }
+
   // @Get()
   // findAll() {
   //   return this.usersService.findAll();
