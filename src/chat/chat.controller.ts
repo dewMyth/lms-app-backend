@@ -36,4 +36,26 @@ export class ChatController {
     }
     return this.chatService.getAllChatThreadsByUserId(userId);
   }
+
+  @Post('create-admin-chat-thread')
+  async createAdminChatThread(@Body() chatData: any) {
+    return this.chatService.createAdminChatThread(chatData);
+  }
+
+  @Post('create-admin-chat-message')
+  async createAdminChatMessage(@Body() chatData: any) {
+    return this.chatService.createAdminChatMessage(chatData);
+  }
+
+  @Get('get-all-chat-threads-with-messages')
+  async getAllChatThreadsWithMessages() {
+    return this.chatService.getAllChatThreadsWithMessages();
+  }
+  @Get('get-all-chat-threads-with-messages-by-user/:userId')
+  async getAllChatThreadsWithMessagesByUser(@Param('userId') userId: string) {
+    if (!userId) {
+      return { error: 'userId is required' };
+    }
+    return this.chatService.getAllChatThreadsWithMessagesByUserId(userId);
+  }
 }

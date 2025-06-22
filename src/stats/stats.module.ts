@@ -11,12 +11,16 @@ import {
 } from 'src/subject-content/schemas/activity.schema';
 import { TeacherSchema } from 'src/users/schemas/teacher.schema';
 import { Log, LogSchema } from './schema/log.schema';
+import { VideoLesson } from 'src/subject-content/schemas/video-lesson.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Student.name, schema: StudentSchema }]),
     MongooseModule.forFeature([{ name: Parent.name, schema: ParentSchema }]),
     MongooseModule.forFeature([{ name: Admin.name, schema: AdminSchema }]),
+    MongooseModule.forFeature([
+      { name: VideoLesson.name, schema: ActivitySchema },
+    ]),
     MongooseModule.forFeature([
       { name: Activity.name, schema: ActivitySchema },
     ]),

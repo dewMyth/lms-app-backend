@@ -7,6 +7,7 @@ import { Admin } from 'src/users/schemas/admin.schema';
 import { Activity } from 'src/subject-content/schemas/activity.schema';
 import { Teacher } from 'src/users/schemas/teacher.schema';
 import { Log } from './schema/log.schema';
+import { VideoLesson } from 'src/subject-content/schemas/video-lesson.schema';
 
 @Injectable()
 export class StatsService {
@@ -15,6 +16,7 @@ export class StatsService {
     @InjectModel(Parent.name) private parentModel: Model<Parent>,
     @InjectModel(Admin.name) private adminModel: Model<Admin>,
     @InjectModel(Activity.name) private activityModel: Model<Activity>,
+    @InjectModel(VideoLesson.name) private videoLessonModel: Model<VideoLesson>,
     @InjectModel(Teacher.name) private teacherModel: Model<Teacher>,
     @InjectModel(Log.name) private logModel: Model<Log>,
   ) {}
@@ -34,7 +36,9 @@ export class StatsService {
     const totalStudents = await this.studentModel.countDocuments().exec();
     const totalTeachers = await this.teacherModel.countDocuments().exec();
     // const totalAssignments = await this.activityModel.countDocuments().exec();
-    const totalVideoLessons = await this.activityModel.countDocuments().exec();
+    const totalVideoLessons = await this.videoLessonModel
+      .countDocuments()
+      .exec();
     const activeUsers = await this.studentModel.countDocuments().exec();
 
     // Calculate Completion Rate

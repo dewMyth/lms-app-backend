@@ -14,7 +14,10 @@ export class Admin {
   @Prop()
   password: string;
 
-  @Prop({ default: '' })
+  @Prop({
+    default:
+      'https://efqjdnqbwlsrbzstvlbp.supabase.co/storage/v1/object/public/application-metadata//boy.png',
+  })
   avatar: string;
 }
 
