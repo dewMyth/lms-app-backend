@@ -23,11 +23,21 @@ export class Student {
   @Prop()
   assignments: object[];
 
-  @Prop({ default: '' })
+  @Prop({
+    default: '',
+  })
   grade: string;
 
-  @Prop({ default: '' })
+  @Prop({
+    default:
+      'https://efqjdnqbwlsrbzstvlbp.supabase.co/storage/v1/object/public/application-metadata//stylish-boy.png',
+  })
   avatar: string;
+
+  @Prop({
+    default: '',
+  })
+  parent_id: string;
 }
 
 export const StudentSchema = SchemaFactory.createForClass(Student);

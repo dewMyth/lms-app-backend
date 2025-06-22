@@ -17,7 +17,10 @@ export class Parent {
   @Prop()
   students: string[];
 
-  @Prop({ default: '' })
+  @Prop({
+    default:
+      'https://efqjdnqbwlsrbzstvlbp.supabase.co/storage/v1/object/public/application-metadata//man.png',
+  })
   avatar: string;
 }
 

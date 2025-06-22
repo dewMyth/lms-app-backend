@@ -23,7 +23,10 @@ export class Teacher {
   @Prop()
   subject: string;
 
-  @Prop({ default: '' })
+  @Prop({
+    default:
+      'https://efqjdnqbwlsrbzstvlbp.supabase.co/storage/v1/object/public/application-metadata//female-teacher%20(1).png',
+  })
   avatar: string;
 
   @Prop({ default: 'Teacher' })

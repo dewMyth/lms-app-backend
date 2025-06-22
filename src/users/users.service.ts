@@ -91,7 +91,20 @@ export class UsersService {
             students: [res._id],
           };
 
-          this.parentModel.create(newParent);
+          const parentCreateResponse = await this.parentModel.create(newParent);
+
+          if (parentCreateResponse) {
+            await this.studentModel.updateOne(
+              { _id: res._id },
+              { $set: { parent_id: parentCreateResponse._id } },
+            );
+          }
+
+          if (!res && !parentCreateResponse) {
+            throw new InternalServerErrorException(
+              'Error while saving parent data',
+            );
+          }
         } else {
           await this.parentModel.updateOne(
             { _id: parent._id },
@@ -477,6 +490,16 @@ export class UsersService {
 
     if (userType == 'student') {
       user = await this.studentModel.findById(userId).lean().exec();
+
+      // Find the parent of the student
+      const parent = await this.parentModel
+        .findById(user.parent_id)
+        .lean()
+        .exec();
+
+      if (parent) {
+        user.parent = parent;
+      }
     }
 
     if (userType == 'parent') {
