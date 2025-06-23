@@ -924,6 +924,7 @@ export class UsersService {
       return {
         id: teacher._id.toString(),
         name: teacher.username,
+        username: teacher.username,
         email: teacher.email,
         grade: teacher.grade,
         subject: teacher.subject,
